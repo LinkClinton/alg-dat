@@ -15,7 +15,7 @@ namespace alg_dat {
 
 	template<typename BoundingBox, typename Element>
 	struct bvh_node {
-		BoundingBox box;
+		BoundingBox bound;
 
 		bvh_node* left = nullptr;
 		bvh_node* right = nullptr;
@@ -96,6 +96,10 @@ namespace alg_dat {
 		static auto surface_area(const BoundingBox& bound) {
 			return bound.surface_area();
 		}
+
+		static auto intersect(const BoundingBox& b0, const BoundingBox& b1) {
+			return b0.intersect(b1);
+		}
 	};
 
 	template<typename BoundingBox, typename Element, 
@@ -106,6 +110,10 @@ namespace alg_dat {
 			const std::vector<BoundingBox> &bounds,
 			const std::vector<Element*> &elements,
 			bvh_build_mode mode = bvh_build_mode::surface_area_heuristic);
+
+		auto enumerate_contacts(const BoundingBox &bound) -> std::vector<std::tuple<int, int>>;
+
+		auto elements() -> Element**;
 
 		inline static size_t max_elements_per_node = 255;
 	private:
@@ -124,12 +132,14 @@ namespace alg_dat {
 		node* root;
 		bvh_build_mode mode;
 
-		std::vector<Element*> elements;
+		std::vector<Element*> elements_pool;
 
 		auto recursive_build(
 			std::vector<element_info> &infos,
 			size_t start, size_t end,
 			std::vector<Element*> &new_order)->node*;
+
+		void recursive_enumerate_contacts(node* node, const BoundingBox& bound, std::vector<std::tuple<int, int>> &contacts);
 
 		auto split(std::vector<element_info> &infos,
 			const BoundingBox &centroid_bound,
@@ -165,7 +175,7 @@ namespace alg_dat {
 	template <typename BoundingBox, typename Element>
 	bvh_node<BoundingBox, Element> bvh_node<BoundingBox, Element>::node(int axis, bvh_node* left, bvh_node* right) {
 		return {
-			BoundingBox(left->box, right->box),
+			BoundingBox(left->bound, right->bound),
 			left, right, axis, 0,
 			left->count + right->count };
 	}
@@ -196,7 +206,22 @@ namespace alg_dat {
 		for (size_t i = 0; i < infos.size(); i++)
 			infos[i].bound = bounds[i], infos[i].element = elements[i];
 
-		root = recursive_build(infos, 0, infos.size(), this->elements);
+		root = recursive_build(infos, 0, infos.size(), this->elements_pool);
+	}
+
+	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
+	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::enumerate_contacts(
+		const BoundingBox& bound) -> std::vector<std::tuple<int, int>> {
+		std::vector<std::tuple<int, int>> contacts;
+
+		recursive_enumerate_contacts(root, bound, contacts);
+
+		return contacts;
+	}
+
+	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
+	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::elements() -> Element** {
+		return elements_pool.data();
 	}
 
 	template<typename BoundingBox, typename Element, typename BoundingBoxHelper>
@@ -242,6 +267,21 @@ namespace alg_dat {
 		}
 
 		return node;
+	}
+
+	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
+	void bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::recursive_enumerate_contacts(node* node,
+		const BoundingBox& bound, std::vector<std::tuple<int, int>> &contacts) {
+		if (!BoundingBoxHelper::intersect(node->bound, bound)) return;
+
+		if (node->is_leaf()) {
+			contacts.push_back(std::make_tuple(node->offset, node->count));
+
+			return;
+		}
+
+		recursive_enumerate_contacts(node->left, bound, contacts);
+		recursive_enumerate_contacts(node->right, bound, contacts);
 	}
 
 	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>

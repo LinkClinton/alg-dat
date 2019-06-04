@@ -32,6 +32,8 @@ namespace alg_dat {
 		auto centroid(int dim) const -> T;
 
 		auto surface_area() const -> T;
+
+		bool intersect(const bound2_t &bound) const;
 	private:
 		vec2_t<T> min;
 		vec2_t<T> max;
@@ -90,6 +92,14 @@ namespace alg_dat {
 	template <typename T>
 	auto bound2_t<T>::surface_area() const -> T {
 		return (max.x - min.x) * (max.y - min.y);
+	}
+
+	template <typename T>
+	bool bound2_t<T>::intersect(const bound2_t& bound) const {
+		if (min.x > bound.max.x || max.x < bound.min.x) return false;
+		if (min.y > bound.max.y || max.y < bound.min.y) return false;
+
+		return true;
 	}
 
 	using bound2 = bound2_t<real>;

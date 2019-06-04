@@ -9,6 +9,8 @@
 
 using namespace alg_dat;
 
+typedef std::chrono::high_resolution_clock time_point;
+
 class segment {
 public:
 	vec2 start;
@@ -74,7 +76,7 @@ inline bool segment::intersect(segment* segment, vec2& point) const {
 
 int main() {
 	std::random_device rd;
-	std::mt19937 random_engine(0);//rd()
+	std::mt19937 random_engine(rd());//rd()
 
 	const std::uniform_real_distribution<real> gen_real(0, 1000000);
 	const std::uniform_int_distribution<size_t> gen_size(0, 10000);
@@ -98,10 +100,48 @@ int main() {
 				vec2::max(segment.start, segment.end)));
 	}
 
+	size_t brute_count = 0;
+	
+	const auto brute_start_time = time_point::now();
+
+	for (size_t i = 0; i < segments.size(); i++) {
+		for (size_t j = i; j < segments.size(); j++) {
+			if (segments[i].intersect(&segments[j])) brute_count++;
+		}
+	}
+
+	const auto brute_end_time = time_point::now();
+
 	for (size_t i = 0; i < segments.size(); i++)
 		segments_ptr.emplace_back(&segments[i]);
 
 	bvh_accelerator<bound2, segment> bvh(volumes, segments_ptr, bvh_build_mode::surface_area_heuristic);
+
+	size_t bvh_count = 0;
+
+	const auto bvh_start_time = time_point::now();
+
+	auto ptr = bvh.elements();
+	
+	for (size_t i = 0; i < segments.size(); i++) {
+		auto contacts = bvh.enumerate_contacts(volumes[i]);
+
+		for (auto &contact : contacts) {
+			const auto offset = std::get<0>(contact);
+			const auto count = std::get<1>(contact);
+
+			for (int j = offset; j < offset + count; j++)
+				if (segments[i].intersect(ptr[j])) bvh_count++;
+		}
+	}
+
+	const auto bvh_end_time = time_point::now();
+
+	const auto brute_time = std::chrono::duration_cast<std::chrono::duration<float>>(brute_end_time - brute_start_time).count();
+	const auto bvh_time = std::chrono::duration_cast<std::chrono::duration<float>>(bvh_end_time - bvh_start_time).count();
+
+	std::cout << brute_count << " " << bvh_count / 2 << std::endl;
+	std::cout << test_case << ", " << brute_time << ", " << bvh_time << std::endl;
 
 	system("pause");
 }
