@@ -7,7 +7,7 @@ namespace alg_dat {
 	template<typename T>
 	class bound2_t {
 	public:
-		bound2_t() = default;
+		bound2_t() : min(FLT_MAX), max(FLT_MIN) {}
 
 		bound2_t(
 			const vec2_t<T> &min,
@@ -38,9 +38,9 @@ namespace alg_dat {
 	};
 
 	template <typename T>
-	bound2_t<T>::bound2_t(const vec2_t<T>& min, const vec2_t<T>& max) {
-		min = vec2_t<T>::min(min, max);
-		max = vec2_t<T>::max(min, max);
+	bound2_t<T>::bound2_t(const vec2_t<T>& min, const vec2_t<T>& max) :
+		min(vec2_t<T>::min(min, max)), max(vec2_t<T>::max(min, max)) {
+
 	}
 
 	template <typename T>

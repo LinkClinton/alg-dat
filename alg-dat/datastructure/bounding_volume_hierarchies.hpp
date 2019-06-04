@@ -129,26 +129,30 @@ namespace alg_dat {
 		auto recursive_build(
 			std::vector<element_info> &infos,
 			size_t start, size_t end,
-			std::vector<Element*> new_order)->node*;
+			std::vector<Element*> &new_order)->node*;
 
 		auto split(std::vector<element_info> &infos,
-			const BoundingBox &centroid_bound, int dim,
+			const BoundingBox &centroid_bound,
+			const BoundingBox &bounds, int dim,
 			size_t start, size_t end)->size_t;
 
 		auto split_middle(std::vector<element_info> &infos,
-			const BoundingBox &centroid_bound, int dim,
+			const BoundingBox &centroid_bound,
+			const BoundingBox &bounds, int dim,
 			size_t start, size_t end)->size_t;
 
 		auto split_equal_counts(std::vector<element_info> &infos,
-			const BoundingBox &centroid_bound, int dim,
+			const BoundingBox &centroid_bound, 
+			const BoundingBox &bounds, int dim,
 			size_t start, size_t end)->size_t;
 
 		auto split_surface_area_heuristic(std::vector<element_info> &infos,
-			const BoundingBox &centroid_bound, int dim,
+			const BoundingBox &centroid_bound, 
+			const BoundingBox &bounds, int dim,
 			size_t start, size_t end)->size_t;
 
 		auto cost_surface_area_heuristic(const std::vector<bucket_info> &infos,
-			const BoundingBox &centroid_bound, size_t location)->real;
+			const BoundingBox &bounds, size_t location)->real;
 	};
 
 	template <typename BoundingBox, typename Element>
@@ -197,10 +201,10 @@ namespace alg_dat {
 
 	template<typename BoundingBox, typename Element, typename BoundingBoxHelper>
 	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::recursive_build(std::vector<element_info> &infos,
-		size_t start, size_t end, std::vector<Element*> new_order) -> node* {
+		size_t start, size_t end, std::vector<Element*> &new_order) -> node* {
 		auto node = allocator.allocate();
 
-		auto bounds = BoundingBox();
+		auto bounds = BoundingBox(infos[start].bound);
 		for (auto i = start; i < end; i++) BoundingBoxHelper::apply(bounds, infos[i].bound);
 
 		if (end - start == 1) {
@@ -209,7 +213,9 @@ namespace alg_dat {
 			new_order.push_back(infos[start].element);
 		}
 		else {
-			auto centroid_bound = BoundingBox();
+			auto centroid_bound = BoundingBox(
+				BoundingBoxHelper::centroid(infos[start].bound),
+				BoundingBoxHelper::centroid(infos[start].bound));
 			for (auto i = start; i < end; i++) BoundingBoxHelper::apply(centroid_bound, BoundingBoxHelper::centroid(infos[i].bound));
 
 			auto dim = BoundingBoxHelper::max_dimension(centroid_bound);
@@ -221,7 +227,7 @@ namespace alg_dat {
 				for (auto i = start; i < end; i++) new_order.push_back(infos[i].element);
 			}
 			else {
-				auto mid = split(infos, centroid_bound, dim, start, end);
+				auto mid = split(infos, centroid_bound, bounds, dim, start, end);
 
 				//leaf node
 				if (mid == start || mid == end) {
@@ -240,19 +246,21 @@ namespace alg_dat {
 
 	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
 	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::split(std::vector<element_info> &infos,
-		const BoundingBox &centroid_bound, int dim,
+		const BoundingBox &centroid_bound, 
+		const BoundingBox &bounds, int dim,
 		size_t start, size_t end) -> size_t {
 		switch (mode) {
-		case bvh_build_mode::middle: return split_middle(infos, centroid_bound, dim, start, end);
-		case bvh_build_mode::equal_counts: return split_equal_counts(infos, centroid_bound, dim, start, end);
-		case bvh_build_mode::surface_area_heuristic: return split_surface_area_heuristic(infos, centroid_bound, dim, start, end);
+		case bvh_build_mode::middle: return split_middle(infos, centroid_bound, bounds, dim, start, end);
+		case bvh_build_mode::equal_counts: return split_equal_counts(infos, centroid_bound, bounds, dim, start, end);
+		case bvh_build_mode::surface_area_heuristic: return split_surface_area_heuristic(infos, centroid_bound, bounds, dim, start, end);
 		default: throw std::exception("error : invalid build mode.");
 		}
 	}
 
 	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
 	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::split_middle(std::vector<element_info>& infos,
-		const BoundingBox& centroid_bound, int dim,
+		const BoundingBox& centroid_bound, 
+		const BoundingBox& bounds, int dim,
 		size_t start, size_t end) -> size_t {
 		auto mid_position = (
 			BoundingBoxHelper::min_property(centroid_bound, dim) + 
@@ -266,14 +274,15 @@ namespace alg_dat {
 
 		auto mid = static_cast<size_t>(mid_ptr - &infos[0]);
 
-		if (mid == start || mid == end) return split_equal_counts(infos, centroid_bound, dim, start, end);
+		if (mid == start || mid == end) return split_equal_counts(infos, centroid_bound, bounds, dim, start, end);
 
 		return mid;
 	}
 
 	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
 	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::split_equal_counts(std::vector<element_info>& infos,
-		const BoundingBox& centroid_bound, int dim, size_t start, size_t end) -> size_t {
+		const BoundingBox& centroid_bound,
+		const BoundingBox& bounds, int dim, size_t start, size_t end) -> size_t {
 		auto mid = (start + end) >> 1;
 
 		std::nth_element(&infos[start], &infos[mid], &infos[end - 1] + 1,  
@@ -286,8 +295,9 @@ namespace alg_dat {
 
 	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
 	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::split_surface_area_heuristic(std::vector<element_info>& infos,
-		const BoundingBox& centroid_bound, int dim, size_t start, size_t end) -> size_t {
-		if (start - end <= 4) return split_equal_counts(infos, centroid_bound, dim, start, end);
+		const BoundingBox& centroid_bound,
+		const BoundingBox& bounds, int dim, size_t start, size_t end) -> size_t {
+		if (start - end <= 4) return split_equal_counts(infos, centroid_bound, bounds, dim, start, end);
 
 		constexpr size_t buckets_count = 12;
 
@@ -295,7 +305,9 @@ namespace alg_dat {
 
 		for (auto i = start; i < end; i++) {
 			auto location = static_cast<size_t>(
-				(BoundingBoxHelper::centroid(infos[i].bound, dim) / BoundingBoxHelper::centroid(centroid_bound, dim)) * buckets_count);
+				buckets_count * (
+				(BoundingBoxHelper::centroid(infos[i].bound, dim) - BoundingBoxHelper::min_property(centroid_bound, dim)) /
+				(BoundingBoxHelper::max_property(centroid_bound, dim) - BoundingBoxHelper::min_property(centroid_bound, dim))));
 			
 			if (location == buckets_count) location = buckets_count - 1;
 
@@ -304,11 +316,11 @@ namespace alg_dat {
 			BoundingBoxHelper::apply(buckets[location].bounds, infos[i].bound);
 		}
 
-		auto min_cost = cost_surface_area_heuristic(buckets, centroid_bound, 0);
+		auto min_cost = cost_surface_area_heuristic(buckets, bounds, 0);
 		auto min_cost_location = static_cast<size_t>(0);
 
 		for (size_t i = 1; i < buckets_count - 1; i++) {
-			auto cost = cost_surface_area_heuristic(buckets, centroid_bound, i);
+			auto cost = cost_surface_area_heuristic(buckets, bounds, i);
 
 			if (min_cost > cost) min_cost = cost, min_cost_location = i;
 		}
@@ -319,7 +331,9 @@ namespace alg_dat {
 			auto mid_ptr = std::partition(&infos[start], &infos[end - 1] + 1,
 				[=](const element_info &info) {
 				auto location = static_cast<size_t>(
-					buckets_count * (BoundingBoxHelper::centroid(info.bound, dim) / BoundingBoxHelper::centroid(centroid_bound, dim)));
+					buckets_count * (
+						(BoundingBoxHelper::centroid(info.bound, dim) - BoundingBoxHelper::min_property(centroid_bound, dim)) /
+						(BoundingBoxHelper::max_property(centroid_bound, dim) - BoundingBoxHelper::min_property(centroid_bound, dim))));
 
 				if (location == buckets_count) location = buckets_count - 1;
 
@@ -334,7 +348,7 @@ namespace alg_dat {
 
 	template <typename BoundingBox, typename Element, typename BoundingBoxHelper>
 	auto bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>::cost_surface_area_heuristic(const std::vector<bucket_info>& infos,
-		const BoundingBox &centroid_bound, size_t location) -> real {
+		const BoundingBox &bounds, size_t location) -> real {
 		assert(location >= 0 && location < infos.size());
 
 		constexpr auto travel_cost = 0.125f;
@@ -357,7 +371,7 @@ namespace alg_dat {
 
 		return travel_cost + (
 			info0.count * BoundingBoxHelper::surface_area(info0.bounds) +
-			info1.count * BoundingBoxHelper::surface_area(info1.bounds)) / BoundingBoxHelper::surface_area(centroid_bound) * test_cost;
+			info1.count * BoundingBoxHelper::surface_area(info1.bounds)) / BoundingBoxHelper::surface_area(bounds) * test_cost;
 	}
 
 }

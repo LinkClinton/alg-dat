@@ -32,7 +32,13 @@ namespace alg_dat {
 				y + vec.y);
 		}
 
-		vec2_t operator*(const T &value) {
+		vec2_t operator-(const vec2_t &vec) const {
+			return vec2_t(
+				x - vec.x,
+				y - vec.y);
+		}
+
+		vec2_t operator*(const T &value) const {
 			return  vec2_t(
 				x * value, y * value);
 		}
