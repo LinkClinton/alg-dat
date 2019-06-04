@@ -74,31 +74,32 @@ namespace alg_dat {
 		}
 
 		static auto max_dimension(const BoundingBox &bound) -> int {
-			return 0;
+			return bound.max_dimension();
 		}
 
 		static auto max_property(const BoundingBox& bound, int dim) {
-			return 0;
+			return bound.max_property()[dim];
 		}
 
 		static auto min_property(const BoundingBox& bound, int dim) {
-			return 0;
+			return bound.min_property()[dim];
 		}
 
 		static auto centroid(const BoundingBox& bound) {
-			return 0;
+			return bound.centroid();
 		}
 
 		static auto centroid(const BoundingBox& bound, int dim) {
-			return 0;
+			return bound.centroid(dim);
 		}
 
 		static auto surface_area(const BoundingBox& bound) {
-			return 0;
+			return bound.surface_area();
 		}
 	};
 
-	template<typename BoundingBox, typename Element, typename BoundingBoxHelper>
+	template<typename BoundingBox, typename Element, 
+		typename BoundingBoxHelper = bvh_bounding_helper<BoundingBox>>
 	class bvh_accelerator {
 	public:
 		bvh_accelerator(
@@ -255,7 +256,7 @@ namespace alg_dat {
 		size_t start, size_t end) -> size_t {
 		auto mid_position = (
 			BoundingBoxHelper::min_property(centroid_bound, dim) + 
-			BoundingBoxHelper::max_property(centroid_bound, dim)) / 2;
+			BoundingBoxHelper::max_property(centroid_bound, dim)) * 0.5f;
 
 		auto mid_ptr = std::partition(
 			&infos[start], &infos[end - 1] + 1,
@@ -294,7 +295,7 @@ namespace alg_dat {
 
 		for (auto i = start; i < end; i++) {
 			auto location = static_cast<size_t>(
-				buckets_count * (BoundingBoxHelper::centroid(infos[i].bound, dim) / BoundingBoxHelper::centroid(centroid_bound, dim)));
+				(BoundingBoxHelper::centroid(infos[i].bound, dim) / BoundingBoxHelper::centroid(centroid_bound, dim)) * buckets_count);
 			
 			if (location == buckets_count) location = buckets_count - 1;
 
