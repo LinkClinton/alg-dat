@@ -13,7 +13,7 @@
 
 ## DataStructure
 
-- bvh_allocator<BoundingBox, Element, Helper>: Bounding Volume Hierarchies with three build mode.
+- `bvh_accelerator<BoundingBox, Element, Helper>`: Bounding Volume Hierarchies with three build mode.
 
 ## Dependent
 
