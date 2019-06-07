@@ -1,5 +1,28 @@
 #pragma once
 
+/*
+ * bounding_volume_hierarchies.hpp
+ * A bvh data structure with three build mode.
+ * middle : split with centroid bound's center.
+ * equal_counts : split with same size.
+ * surface_area_heuristic : find the min-cost of split method.
+ * 
+ * bvh_allocator : a simple allocator for bvh_accelerator.
+ * bvh_accelerator : bvh data structure.
+ * 
+ * bvh_accelerator<BoundingBox, Element, BoundingBoxHelper>
+ * BoundingBox : bounding box used for bvh
+ * Element : element in the bounding box.
+ * BoundingBoxHelper : help function for bvh.
+ * 
+ * If you want to use bvh_accelerator, a BoundingBoxHelper(see example in line 78, it is the default helper) need be provided.
+ * Some member or member function in BoundingBox we do not to use it, so user need to provide a BoundingBoxHelper and override its function.
+ * If you use the default helper, the BoundingBox need to provide some member function.
+ * "struct bvh_bounding_helper" is a good example for this.
+ * 
+ * Also, you can use "bound2d" in "bound2d.hpp" with default helper function.
+ */
+
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -9,10 +32,20 @@ namespace alg_dat {
 
 	using real = float;
 
+	/**
+	 * \brief bounding volume hierarchies build mode
+	 */
 	enum class bvh_build_mode {
-		middle, equal_counts, surface_area_heuristic
+		middle, 
+		equal_counts, 
+		surface_area_heuristic
 	};
 
+	/**
+	 * \brief bvh node, a bvh node can contain more than one element
+	 * \tparam BoundingBox Bounding Box
+	 * \tparam Element Element
+	 */
 	template<typename BoundingBox, typename Element>
 	struct bvh_node {
 		BoundingBox bound;
@@ -31,6 +64,11 @@ namespace alg_dat {
 		static bvh_node node(int axis, bvh_node* left, bvh_node* right);
 	};
 
+	/**
+	 * \brief A simple allocator for bvh
+	 * \tparam BoundingBox Bounding Box
+	 * \tparam Element Element
+	 */
 	template<typename BoundingBox, typename Element>
 	class bvh_allocator {
 	public:
@@ -56,65 +94,137 @@ namespace alg_dat {
 		bvh_element_info() : element(nullptr) {}
 	};
 
+	/**
+	 * \brief bvh bounding box helper. It provides some help function of bounding box.
+	 * \tparam BoundingBox Bounding Box
+	 */
 	template<typename BoundingBox>
 	struct bvh_bounding_helper {
-		static BoundingBox merge(
-			const BoundingBox &b0, 
-			const BoundingBox &b1) {
-			return BoundingBox(b0, b1);
-		}
-
+		/**
+		 * \brief union two bounding box
+		 * \param bound first bounding box(result)
+		 * \param other second bounding box
+		 */
 		static void apply(BoundingBox &bound, const BoundingBox &other) {
 			bound.apply(other);
 		}
 
+		/**
+		 * \brief union a point to bounding box
+		 * \tparam Point Point Type
+		 * \param bound bounding box
+		 * \param point point
+		 */
 		template<typename Point>
 		static void apply(BoundingBox &bound, const Point &point) {
 			bound.apply(point);
 		}
 
+		/**
+		 * \brief get the max dimension(max - min)
+		 * \param bound Bounding Box
+		 * \return max dimension
+		 */
 		static auto max_dimension(const BoundingBox &bound) -> int {
 			return bound.max_dimension();
 		}
 
+		/**
+		 * \brief get max property
+		 * \param bound bounding box
+		 * \param dim dimension(x, y, z, w, ...)
+		 * \return max value of dimension
+		 */
 		static auto max_property(const BoundingBox& bound, int dim) {
 			return bound.max_property()[dim];
 		}
 
+		/**
+		 * \brief get min property
+		 * \param bound bounding box
+		 * \param dim dimension(x, y, z, w, ...)
+		 * \return min value of dimension
+		 */
 		static auto min_property(const BoundingBox& bound, int dim) {
 			return bound.min_property()[dim];
 		}
 
+		/**
+		 * \brief get centroid
+		 * \param bound bounding box
+		 * \return centroid of bounding box
+		 */
 		static auto centroid(const BoundingBox& bound) {
 			return bound.centroid();
 		}
 
+		/**
+		 * \brief get centroid with dimension
+		 * \param bound bounding box
+		 * \param dim dimension
+		 * \return centroid of bounding box with dimension
+		 */
 		static auto centroid(const BoundingBox& bound, int dim) {
 			return bound.centroid(dim);
 		}
 
+		/**
+		 * \brief get surface area of bounding box
+		 * \param bound bounding box
+		 * \return surface area
+		 */
 		static auto surface_area(const BoundingBox& bound) {
 			return bound.surface_area();
 		}
 
+		/**
+		 * \brief if two bounding box are intersect
+		 * \param b0 first bounding box
+		 * \param b1 second bounding box
+		 * \return true or false
+		 */
 		static auto intersect(const BoundingBox& b0, const BoundingBox& b1) {
 			return b0.intersect(b1);
 		}
 	};
 
+	/**
+	 * \brief bvh accelerator
+	 * \tparam BoundingBox Bounding Box
+	 * \tparam Element Element
+	 * \tparam BoundingBoxHelper Help Function
+	 */
 	template<typename BoundingBox, typename Element, 
 		typename BoundingBoxHelper = bvh_bounding_helper<BoundingBox>>
 	class bvh_accelerator {
 	public:
+		/**
+		 * \brief ctor
+		 * \param bounds bounding boxes
+		 * \param elements pointer to elements
+		 * \param mode build mode
+		 */
 		bvh_accelerator(
 			const std::vector<BoundingBox> &bounds,
 			const std::vector<Element*> &elements,
 			bvh_build_mode mode = bvh_build_mode::surface_area_heuristic);
 
+		/**
+		 * \brief get elements who are intersect with bound
+		 * \param bound bounding box
+		 * \return a std::vector indicate a range from first(get(0)) to end(get(1)) of elements in elements()
+		 */
 		auto enumerate_contacts(const BoundingBox &bound) -> std::vector<std::tuple<int, int>>;
 
+		/**
+		 * \brief get first pointer of elements in memory pool.
+		 * \return first pointer of elements
+		 */
 		auto elements() -> Element**;
 
+		/**
+		 * \brief max number of elements in one node
+		 */
 		inline static size_t max_elements_per_node = 255;
 	private:
 		using node = bvh_node<BoundingBox, Element>;
