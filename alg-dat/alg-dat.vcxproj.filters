@@ -41,5 +41,8 @@
     <ClInclude Include="dependent\bound2d.hpp">
       <Filter>Header Files\dependent</Filter>
     </ClInclude>
+    <ClInclude Include="algorithm\radix_sort.hpp">
+      <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -11,6 +11,8 @@
 
 ## Algorithm
 
+- `radix_sort<KeyType, Element>` : A very fast sort function to sort any elements with unsigned type key.
+
 ## DataStructure
 
 - `bvh_accelerator<BoundingBox, Element, Helper>`: Bounding Volume Hierarchies with three build mode.
