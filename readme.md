@@ -6,7 +6,7 @@
 
 - Light and Header-only.
 - Most Template, easy for using with least helper function.
-- Least dependent header file, most `alg` or `dat` is indepdent.
+- Least dependent header file, most `alg` or `dat` is independent.
 - Performance friendly.
 
 ## Algorithm
