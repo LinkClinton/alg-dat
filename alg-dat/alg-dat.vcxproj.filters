@@ -22,6 +22,9 @@
     <Filter Include="Header Files\datastructure">
       <UniqueIdentifier>{2ca9bb67-ae4f-4888-8a65-ac80f07b0ccc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\dependent\memory">
+      <UniqueIdentifier>{3680c7c5-9a42-4958-88b8-88fbd7607f39}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -29,20 +32,17 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="datastructure\bounding_volume_hierarchies.hpp">
-      <Filter>Header Files\datastructure</Filter>
-    </ClInclude>
     <ClInclude Include="utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dependent\vec2.hpp">
       <Filter>Header Files\dependent</Filter>
     </ClInclude>
-    <ClInclude Include="dependent\bound2d.hpp">
-      <Filter>Header Files\dependent</Filter>
-    </ClInclude>
     <ClInclude Include="algorithm\radix_sort.hpp">
       <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="dependent\memory\allocator.hpp">
+      <Filter>Header Files\dependent\memory</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

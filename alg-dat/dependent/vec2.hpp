@@ -17,7 +17,7 @@ namespace alg_dat {
 		vec2_t(T x, T y) : x(x), y(y) {}
 
 		vec2_t(T value) : x(value), y(value) {}
-
+		
 		T& operator [](size_t index) {
 			assert(index < 2);
 

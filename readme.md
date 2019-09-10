@@ -15,8 +15,8 @@
 
 ## DataStructure
 
-- `bvh_accelerator<BoundingBox, Element, Helper>`: Bounding Volume Hierarchies with three build mode.
-
 ## Dependent
 
 Some help function or structure for algorithm and data structure.
+
+- `allocator`: Some simple and useful allocator.
