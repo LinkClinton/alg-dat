@@ -22,6 +22,18 @@ namespace alg_dat {
 
 		allocator_interface(size_type space, size_type factor) :
 			mExpandFactor(factor), mMemorySpace(space) {}
+
+		allocator_interface(const allocator_interface &allocator) :
+			mExpandFactor(allocator.mExpandFactor),
+			mMemorySpace(allocator.mMemorySpace),
+			mMemorySize(allocator.mMemorySize) {}
+
+		allocator_interface(allocator_interface &&allocator) noexcept
+		{
+			std::swap(mExpandFactor, allocator.mExpandFactor);
+			std::swap(mMemorySpace, allocator.mMemorySpace);
+			std::swap(mMemorySize, allocator.mMemorySize);
+		}
 		
 		virtual ~allocator_interface() = default;
 	protected:
@@ -69,12 +81,38 @@ namespace alg_dat {
 		using typename base::size_type;
 		using type = Element;
 	protected:
-		element_allocator_interface() = default;
+		element_allocator_interface() : element_allocator_interface(255, 2) {}
 
 		element_allocator_interface(size_type space, size_type factor) :
-			base(space, factor) {}
+			base(space, factor)
+		{
+			assert(space != 0);
+
+			mElements = static_cast<Element*>(std::malloc(base::mMemorySpace * sizeof(Element)));
+		}
+
+		element_allocator_interface(const element_allocator_interface &allocator) :
+			base(allocator)
+		{
+			mElements = static_cast<Element*>(std::malloc(base::mMemorySpace * sizeof(Element)));
+
+			std::copy(allocator.mElements, allocator.mElements + allocator.mMemorySize, mElements);
+		}
+
+		element_allocator_interface(element_allocator_interface &&allocator) noexcept :
+			base(allocator)
+		{
+			std::swap(mElements, allocator.mElements);
+		}
 		
-		~element_allocator_interface() = default;
+		~element_allocator_interface()
+		{
+			if (mElements == nullptr) return;
+
+			std::free(mElements);
+
+			mElements = nullptr;
+		}
 
 		void expand_if_not_enough(size_type space_need) {
 			static ExpandClass expandSpace;
@@ -110,18 +148,41 @@ namespace alg_dat {
 		using base::size_type;
 		using base::type;
 	public:
-		stack_allocator() : stack_allocator(255, 2) {}
+		stack_allocator() = default;
 		
-		stack_allocator(size_type space, size_type factor = 2) :
-			base(space, factor)
-		{
-			assert(space != 0);
+		stack_allocator(size_type space, size_type factor = 2) : base(space, factor) {}
+
+		stack_allocator(const stack_allocator& allocator) : base(allocator) {}
+		
+		stack_allocator(stack_allocator&& allocator) noexcept : base(allocator) {}
+
+		stack_allocator& operator=(const stack_allocator &allocator) {
+			base::mExpandFactor = allocator.mExpandFactor;
+			base::mMemorySpace = allocator.mMemorySpace;
+			base::mMemorySize = allocator.mMemorySize;
+
+			if (base::mElements != nullptr) std::free(base::mElements);
 
 			base::mElements = static_cast<Element*>(std::malloc(base::mMemorySpace * sizeof(Element)));
+
+			std::copy(allocator.mElements, allocator.mElements + allocator.mMemorySize, base::mElements);
+
+			return *this;
 		}
+		
+		stack_allocator& operator=(stack_allocator&& allocator) noexcept {
+			if (this == &allocator) return *this;
 
-		~stack_allocator() { std::free(base::mElements); }
-
+			std::swap(base::mElements, allocator.mElements);
+			std::swap(base::mExpandFactor, allocator.mExpandFactor);
+			std::swap(base::mMemorySpace, allocator.mMemorySpace);
+			std::swap(base::mMemorySize, allocator.mMemorySize);
+			
+			return *this;
+		}
+		
+		~stack_allocator() = default;
+		
 		auto allocate(size_type count = 1)->Element* {
 			//check the memory if enough
 			base::expand_if_not_enough(base::mMemorySize + count);
@@ -130,14 +191,21 @@ namespace alg_dat {
 			const auto end = base::mElements + base::mMemorySize + count;
 
 			//construct the elements
-			for (auto it = begin; it != end; ++it) 
+			for (auto it = begin; it != end; ++it) new (it)Element();
 			
 			base::mMemorySize = base::mMemorySize + count;
 			
 			return base::mElements + base::mMemorySize - count;
 		}
 
-		auto deallocate(size_type count = 1) {
+		template<typename ...Types>
+		auto construct(Types&&... args)->Element* {
+			base::expand_if_not_enough(++base::mMemorySize);
+			
+			return new (base::mElements + base::mMemorySize - 1)Element(std::forward<Types>(args)...);
+		}
+
+		void deallocate(size_type count = 1) {
 			assert(base::mMemorySize >= count);
 
 			const auto begin = base::mElements + base::mMemorySize - 1;
@@ -146,6 +214,12 @@ namespace alg_dat {
 			for (auto it = begin; it != end; --it) it->~Element();
 
 			base::mMemorySize = base::mMemorySize - count;
+		}
+
+		void destroy(Element* element) const {
+			assert(static_cast<size_type>(element - base::mElements) < base::mMemorySize);
+
+			element->~Element();
 		}
 	};
 }

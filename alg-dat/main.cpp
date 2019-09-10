@@ -18,11 +18,16 @@ struct T {
 	}
 };
 
-int main() {
-	stack_allocator<T> a;
+auto fun() -> stack_allocator<T> {
 	
-	auto x = a.allocate(20);
+	return stack_allocator<T>();
+}
 
+int main() {
+	stack_allocator<T> x;
+
+
+	auto a = std::move(std::vector<T>());
 	
-	a.deallocate(20);
+	std::cout << 2;
 }
