@@ -79,11 +79,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)bin\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)bin\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)bin\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)bin\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -150,7 +150,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="algorithm\radix_sort.hpp" />
+    <ClInclude Include="datastructure\container\container.hpp" />
     <ClInclude Include="dependent\memory\allocator.hpp" />
+    <ClInclude Include="dependent\memory\stack_allocator.hpp" />
     <ClInclude Include="dependent\vec2.hpp" />
     <ClInclude Include="utility.hpp" />
   </ItemGroup>

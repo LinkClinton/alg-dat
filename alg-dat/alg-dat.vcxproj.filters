@@ -25,6 +25,9 @@
     <Filter Include="Header Files\dependent\memory">
       <UniqueIdentifier>{3680c7c5-9a42-4958-88b8-88fbd7607f39}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\datastructure\container">
+      <UniqueIdentifier>{ad274595-4859-4f51-bc3a-d7b3531331c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -43,6 +46,12 @@
     </ClInclude>
     <ClInclude Include="dependent\memory\allocator.hpp">
       <Filter>Header Files\dependent\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="dependent\memory\stack_allocator.hpp">
+      <Filter>Header Files\dependent\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="datastructure\container\container.hpp">
+      <Filter>Header Files\datastructure\container</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

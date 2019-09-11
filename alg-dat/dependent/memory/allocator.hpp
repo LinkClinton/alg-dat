@@ -1,5 +1,16 @@
 #pragma once
 
+/*
+ * @name allocator.hpp
+ * There are some interface of allocator.
+ *
+ * allocator_interface is the main interface.
+ * It contains the "ExpandClass" that is a called object to generator the size we expand when we need expand the memory.
+ * 
+ * element_allocator_interface is the main interface for element_allocator.
+ * There are many types of allocator for elements, like stack_allocator(filo), queue_allocator(fifo).
+ */
+
 #include <functional>
 #include <cassert>
 #include <memory>
@@ -138,88 +149,5 @@ namespace alg_dat {
 		}
 	protected:
 		Element* mElements = nullptr;
-	};
-
-	template<typename Element, typename ExpandClass = expand_class_mul>
-	class stack_allocator : public element_allocator_interface<Element, ExpandClass> {
-	public:
-		using base = element_allocator_interface<Element, ExpandClass>;
-		using base::expand_class;
-		using base::size_type;
-		using base::type;
-	public:
-		stack_allocator() = default;
-		
-		stack_allocator(size_type space, size_type factor = 2) : base(space, factor) {}
-
-		stack_allocator(const stack_allocator& allocator) : base(allocator) {}
-		
-		stack_allocator(stack_allocator&& allocator) noexcept : base(allocator) {}
-
-		stack_allocator& operator=(const stack_allocator &allocator) {
-			base::mExpandFactor = allocator.mExpandFactor;
-			base::mMemorySpace = allocator.mMemorySpace;
-			base::mMemorySize = allocator.mMemorySize;
-
-			if (base::mElements != nullptr) std::free(base::mElements);
-
-			base::mElements = static_cast<Element*>(std::malloc(base::mMemorySpace * sizeof(Element)));
-
-			std::copy(allocator.mElements, allocator.mElements + allocator.mMemorySize, base::mElements);
-
-			return *this;
-		}
-		
-		stack_allocator& operator=(stack_allocator&& allocator) noexcept {
-			if (this == &allocator) return *this;
-
-			std::swap(base::mElements, allocator.mElements);
-			std::swap(base::mExpandFactor, allocator.mExpandFactor);
-			std::swap(base::mMemorySpace, allocator.mMemorySpace);
-			std::swap(base::mMemorySize, allocator.mMemorySize);
-			
-			return *this;
-		}
-		
-		~stack_allocator() = default;
-		
-		auto allocate(size_type count = 1)->Element* {
-			//check the memory if enough
-			base::expand_if_not_enough(base::mMemorySize + count);
-
-			const auto begin = base::mElements + base::mMemorySize;
-			const auto end = base::mElements + base::mMemorySize + count;
-
-			//construct the elements
-			for (auto it = begin; it != end; ++it) new (it)Element();
-			
-			base::mMemorySize = base::mMemorySize + count;
-			
-			return base::mElements + base::mMemorySize - count;
-		}
-
-		template<typename ...Types>
-		auto construct(Types&&... args)->Element* {
-			base::expand_if_not_enough(++base::mMemorySize);
-			
-			return new (base::mElements + base::mMemorySize - 1)Element(std::forward<Types>(args)...);
-		}
-
-		void deallocate(size_type count = 1) {
-			assert(base::mMemorySize >= count);
-
-			const auto begin = base::mElements + base::mMemorySize - 1;
-			const auto end = base::mElements + base::mMemorySize - count - 1;
-
-			for (auto it = begin; it != end; --it) it->~Element();
-
-			base::mMemorySize = base::mMemorySize - count;
-		}
-
-		void destroy(Element* element) const {
-			assert(static_cast<size_type>(element - base::mElements) < base::mMemorySize);
-
-			element->~Element();
-		}
 	};
 }
